@@ -1,16 +1,39 @@
 # kitup-backend
 멋쟁이사자처럼 4호선톤 kitup 백엔드 레포지토리입니다.
 
+## 처음 설정
+
+`.python-version`에 적힌 버전의 [Python](https://www.python.org/downloads/)과 Docker Desktop을 먼저 설치합니다.
+
+DB 설정은 `.env.example`의 개발용 기본값을 그대로 사용합니다.
+
+```powershell
+python --version
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1     # macOS/Linux: source .venv/bin/activate
+pip install -r requirements.txt
+Copy-Item .env.example .env       # macOS/Linux: cp .env.example .env (기존 .env가 있으면 생략)
+```
+
 ## 실행
 
-```bash
-python -m venv .venv
-source .venv/Scripts/activate   # mac: source .venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env
+Docker Desktop을 켠 뒤 실행합니다.
+
+```powershell
+.\.venv\Scripts\Activate.ps1     # macOS/Linux: source .venv/bin/activate
+docker compose -f compose.dev.yaml up -d --wait db
 python manage.py migrate
 python manage.py runserver
 ```
+
+## 개발 DB
+
+PostgreSQL 18.6은 `compose.dev.yaml`로, Django는 PC의 가상환경에서 실행합니다.
+
+- 접속 설정: `.env`
+- 종료: `docker compose -f compose.dev.yaml stop db`
+- DB를 종료해도 데이터는 유지됩니다.
+- `docker compose -f compose.dev.yaml down -v`는 데이터를 삭제합니다.
 
 ## 구조
 
@@ -23,7 +46,7 @@ kitup-backend/
 ├── config/
 │   ├── settings/
 │   │   ├── base.py                 # 공통 설정
-│   │   ├── local.py                # 로컬 (sqlite)
+│   │   ├── local.py                # 개발 (PostgreSQL)
 │   │   └── prod.py                 # 배포 (postgres)
 │   ├── urls.py                     # 루트 URL
 │   ├── asgi.py
