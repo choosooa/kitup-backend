@@ -52,3 +52,14 @@ class IngredientUnit(models.TextChoices):
     MILLILITER = "ml", "밀리리터"
     LITER = "l", "리터"
     PIECE = "piece", "개"
+
+
+class Sentiment(models.TextChoices):
+    POSITIVE = "POSITIVE", "긍정"
+    NEGATIVE = "NEGATIVE", "부정"
+    MIXED = "MIXED", "혼합"
+
+
+class AspectSentiment(models.TextChoices):
+    POSITIVE = "POSITIVE", "긍정"
+    NEGATIVE = "NEGATIVE", "부정"
