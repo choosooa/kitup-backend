@@ -7,6 +7,7 @@ DELIVERY_COMMISSION_RATE = Decimal("0.098")   # 배달 수수료 9.8%
 DELIVERY_FEE = 3200                           # 가게 부담 배달비
 DEFAULT_PACKAGING_COST = 1000
 DEFAULT_ADDITIONAL_FIXED_COST = 0
+OPERATING_DAYS = 14                           # 가상 운영 기간 (started_at 날짜부터)
 
 # TODO: 와이어프레임 기준으로 확정
 OPERATING_HOUR_CHOICES = [f"{h:02d}:00" for h in range(0, 24)]
