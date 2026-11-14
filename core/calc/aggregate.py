@@ -2,7 +2,7 @@
 
 from collections import Counter
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta
+from datetime import datetime
 from decimal import ROUND_HALF_UP, Decimal
 
 from core.calc.margin import delivery_margin, pickup_margin, round_won
@@ -61,29 +61,7 @@ def by_hour(orders: list[OrderRow]) -> list[dict]:
     """1시간 단위 주문 건수. 건수 내림차순, 같으면 시각 오름차순."""
     counts = Counter(o.created_at.hour for o in orders)
     total = len(orders)
-    peak_count = max(counts.values(), default=0)
     return [
-        {
-            "hour": hour,
-            "order_count": count,
-            "ratio": ratio(count, total),
-            # 최다 건수 시간대 (동률 모두)
-            "is_peak": count == peak_count,
-        }
+        {"hour": hour, "order_count": count, "ratio": ratio(count, total)}
         for hour, count in sorted(counts.items(), key=lambda item: (-item[1], item[0]))
     ]
-
-
-def by_day(orders: list[OrderRow], start: date | None, days: int) -> list[dict]:
-    """날짜별 주문 건수·금액. 운영 기간 중 주문 없는 날은 0건으로 포함."""
-    dates = {start + timedelta(days=i) for i in range(days)} if start else set()
-    dates |= {o.created_at.date() for o in orders}  # 기간 밖 주문도 누락 없이 포함
-    rows = []
-    for day in sorted(dates):
-        day_orders = [o for o in orders if o.created_at.date() == day]
-        rows.append({
-            "date": day,
-            "order_count": len(day_orders),
-            "sales_amount": sum(o.sales_amount for o in day_orders),
-        })
-    return rows

@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import datetime
 from decimal import Decimal
 from zoneinfo import ZoneInfo
 
@@ -31,12 +31,11 @@ class AggregateTests(SimpleTestCase):
             "total_contribution_margin": Decimal("0"), "average_contribution_margin": None,
         })
 
-    def test_by_hour_sorts_by_count_then_hour_and_marks_ties_as_peak(self):
+    def test_by_hour_sorts_by_count_then_hour(self):
         orders = [row("PICKUP", h) for h in (19, 11, 12, 12, 18, 18)]
         slots = aggregate.by_hour(orders)
         self.assertEqual([s["hour"] for s in slots], [12, 18, 11, 19])
-        self.assertEqual([s["is_peak"] for s in slots], [True, True, False, False])
-        self.assertEqual(slots[0]["ratio"], Decimal("33.3"))
+        self.assertEqual(slots[0], {"hour": 12, "order_count": 2, "ratio": Decimal("33.3")})
 
     def test_by_channel_always_returns_both_channels(self):
         channels = aggregate.by_channel([row("DELIVERY", 12)], Decimal("4200.5"), Decimal("1000"))
@@ -44,14 +43,6 @@ class AggregateTests(SimpleTestCase):
         self.assertEqual(channels[0]["order_count"], 0)
         self.assertIsNone(channels[0]["average_contribution_margin"])
         self.assertEqual(channels[1]["average_contribution_margin"], Decimal("2424"))
-
-    def test_by_day_fills_empty_days_and_keeps_orders_outside_period(self):
-        orders = [row("PICKUP", 12, day=3), row("PICKUP", 13, day=3), row("PICKUP", 12, day=20)]
-        days = aggregate.by_day(orders, date(2026, 11, 2), 14)
-        self.assertEqual(len(days), 15)  # 14일 + 기간 밖 하루
-        self.assertEqual(days[0], {"date": date(2026, 11, 2), "order_count": 0, "sales_amount": 0})
-        self.assertEqual(days[1], {"date": date(2026, 11, 3), "order_count": 2, "sales_amount": 24000})
-        self.assertEqual(days[-1]["date"], date(2026, 11, 20))
 
     def test_ratio(self):
         self.assertIsNone(aggregate.ratio(1, 0))

@@ -17,10 +17,6 @@ class SummarySerializer(serializers.Serializer):
     fixed_cost_applied = serializers.BooleanField()
 
 
-class HourlyLimitSerializer(serializers.Serializer):
-    limit = serializers.IntegerField(min_value=1, max_value=24, default=5)
-
-
 class _HourSlotSerializer(serializers.Serializer):
     hour = serializers.IntegerField()
     label = serializers.SerializerMethodField()
@@ -55,13 +51,3 @@ class _ChannelSerializer(serializers.Serializer):
 
 class ChannelComparisonSerializer(serializers.Serializer):
     channels = _ChannelSerializer(many=True)
-
-
-class _DaySerializer(serializers.Serializer):
-    date = serializers.DateField()
-    order_count = serializers.IntegerField()
-    sales_amount = serializers.IntegerField()
-
-
-class DailySalesSerializer(serializers.Serializer):
-    days = _DaySerializer(many=True)

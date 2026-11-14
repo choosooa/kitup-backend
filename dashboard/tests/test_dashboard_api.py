@@ -96,22 +96,26 @@ class HourlySalesTests(DashboardTestBase):
         self.assertEqual(data["total_order_count"], 7)
         self.assertEqual(data["peak"], {"hours": [12, 18], "order_count": 4, "ratio": 57.1})
         self.assertEqual([s["hour"] for s in data["slots"]], [12, 18, 11, 15, 19])
+        self.assertEqual([s["is_peak"] for s in data["slots"]], [True, True, False, False, False])
         self.assertEqual(data["slots"][0], {
             "hour": 12, "label": "12:00 - 13:00", "order_count": 2, "ratio": 28.6, "is_peak": True,
         })
 
-    def test_limit(self):
-        data = self.get("dashboard-hourly-sales", limit=2).json()["data"]
-        self.assertEqual([s["hour"] for s in data["slots"]], [12, 18])
-        # peak는 limit과 무관하게 전체 기준
-        self.assertEqual(data["peak"]["order_count"], 4)
+    def test_top_five_slots_only(self):
+        add_order(self.test, "PICKUP", 9)  # 6번째 시간대
+        data = self.get("dashboard-hourly-sales").json()["data"]
+        self.assertEqual(len(data["slots"]), 5)
+        self.assertEqual(data["total_order_count"], 8)
 
-    def test_invalid_limit(self):
-        for limit in (0, 25, "abc"):
-            with self.subTest(limit=limit):
-                res = self.get("dashboard-hourly-sales", limit=limit)
-                self.assertEqual(res.status_code, 400)
-                self.assertEqual(res.json()["error"]["code"], "invalid")
+    def test_peak_is_top_two_even_without_tie(self):
+        # 1위 단독(12시 3건)이어도 2위(18시)까지 묶어서 안내
+        add_order(self.test, "PICKUP", 12)
+        data = self.get("dashboard-hourly-sales").json()["data"]
+        self.assertEqual(data["peak"], {"hours": [12, 18], "order_count": 5, "ratio": 62.5})
+
+    def test_query_params_are_ignored(self):
+        data = self.get("dashboard-hourly-sales", limit=1).json()["data"]
+        self.assertEqual(len(data["slots"]), 5)
 
     def test_hour_is_korean_time(self):
         test = make_test(total_ingredient_cost=1)
@@ -148,26 +152,9 @@ class ChannelComparisonTests(DashboardTestBase):
         })
 
 
-class DailySalesTests(DashboardTestBase):
-    def test_daily_sales_fills_operating_days(self):
-        add_order(self.test, "PICKUP", 12, day=3)
-        add_order(self.test, "DELIVERY", 18, day=3, amount=13000)
-
-        days = self.get("dashboard-daily-sales").json()["data"]["days"]
-
-        self.assertEqual(len(days), 14)
-        self.assertEqual(days[0], {"date": "2026-11-02", "order_count": 0, "sales_amount": 0})
-        self.assertEqual(days[1], {"date": "2026-11-03", "order_count": 2, "sales_amount": 25000})
-        self.assertEqual(days[-1]["date"], "2026-11-15")
-
-    def test_not_started_returns_empty(self):
-        days = self.get("dashboard-daily-sales", make_test().id).json()["data"]["days"]
-        self.assertEqual(days, [])
-
-
 class NotFoundTests(APITestCase):
     def test_missing_test(self):
-        for name in ("dashboard-summary", "dashboard-hourly-sales", "dashboard-channels", "dashboard-daily-sales"):
+        for name in ("dashboard-summary", "dashboard-hourly-sales", "dashboard-channels"):
             with self.subTest(name=name):
                 res = self.client.get(url(name, 999999))
                 self.assertEqual(res.status_code, 404)

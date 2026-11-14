@@ -3,11 +3,13 @@
 from django.utils import timezone
 
 from core.calc import aggregate
-from core.constants import OPERATING_DAYS
 from core.exceptions import CostNotReadyError
 from menu_tests.models import MenuTest
 
 # TODO(팀 확인): Order에 상태 컬럼이 없어 전체 주문을 완료 주문으로 집계함
+
+HOURLY_SLOT_COUNT = 5  # 시간대별 판매 화면에 보여줄 시간대 수
+PEAK_SLOT_COUNT = 2
 
 
 def _orders(test: MenuTest) -> list[aggregate.OrderRow]:
@@ -38,29 +40,23 @@ def summary(test: MenuTest) -> dict:
     }
 
 
-def hourly_sales(test: MenuTest, limit: int) -> dict:
+def hourly_sales(test: MenuTest) -> dict:
     orders = _orders(test)
-    slots = aggregate.by_hour(orders)
-    peaks = [slot for slot in slots if slot["is_peak"]]
+    slots = aggregate.by_hour(orders)[:HOURLY_SLOT_COUNT]
+    # 주문이 많은 상위 2개 시간대 (화면 강조 + 하단 안내 문구용)
+    peaks = slots[:PEAK_SLOT_COUNT]
     peak_count = sum(slot["order_count"] for slot in peaks)
     return {
         "total_order_count": len(orders),
-        # 최다 건수 시간대는 limit과 무관하게 전체 기준으로 계산
         "peak": {
             "hours": sorted(slot["hour"] for slot in peaks),
             "order_count": peak_count,
             "ratio": aggregate.ratio(peak_count, len(orders)),
         } if peaks else None,
-        "slots": slots[:limit],
+        "slots": [{**slot, "is_peak": index < PEAK_SLOT_COUNT} for index, slot in enumerate(slots)],
     }
 
 
 def channels(test: MenuTest) -> dict:
     orders = _orders(test)
     return {"channels": aggregate.by_channel(orders, *_costs(test, orders))}
-
-
-def daily_sales(test: MenuTest) -> dict:
-    orders = _orders(test)
-    start = timezone.localdate(test.started_at) if test.started_at else None
-    return {"days": aggregate.by_day(orders, start, OPERATING_DAYS)}
